@@ -1,54 +1,118 @@
+'''
+A Multilayer Perceptron implementation example using TensorFlow library.
+This example is using the MNIST database of handwritten digits
+(http://yann.lecun.com/exdb/mnist/)
+Author: Aymeric Damien
+Project: https://github.com/aymericdamien/TensorFlow-Examples/
+'''
 
-"""A very simple MNIST classifier.
-See extensive documentation at
-https://www.tensorflow.org/get_started/mnist/beginners
-"""
-from __future__ import absolute_import
-from __future__ import division
 from __future__ import print_function
 
-import argparse
-import sys
+# Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+
 import tensorflow as tf
-from tqdm import tqdm
 
-def main():
-  # Import data
-  mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+# Parameters
+learning_rate = 0.001
+training_epochs = 15
+batch_size = 100
+display_step = 1
 
-  # Create the model
-  x = tf.placeholder(tf.float32, [None, 784])
+# Network Parameters
+n_hidden_1 = 1024 # 1st layer number of features
+n_hidden_2 = 1024 # 2nd layer number of features
+n_hidden_3 = 1024 # 2nd layer number of features
+n_hidden_4 = 1024 # 2nd layer number of features
+n_hidden_5 = 1024 # 2nd layer number of features
 
-  # Layer--1
-  W  = tf.Variable(tf.zeros([784, 1024]))
-  b  = tf.Variable(tf.zeros([1024]))
-  P1 = tf.nn.relu(tf.matmul(x, W) + b)
+n_input = 784 # MNIST data input (img shape: 28*28)
 
-  # Layer--2
-  W1 = tf.Variable(tf.zeros([1024, 10]))
-  b1 = tf.Variable(tf.zeros([10]))
-  y  = (tf.matmul(P1, W1) + b1)
+n_classes = 10 # MNIST total classes (0-9 digits)
 
-  # Define loss and optimizer
-  y_ = tf.placeholder(tf.float32, [None, 10])
+# tf Graph input
+x = tf.placeholder("float", [None, n_input])
+y = tf.placeholder("float", [None, n_classes])
 
-  cross_entropy = tf.reduce_mean(
-      tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
-  train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
-  sess = tf.InteractiveSession()
-  tf.global_variables_initializer().run()
-  # Train
-  for _ in tqdm(range(10000)):
-    batch_xs, batch_ys = mnist.train.next_batch(100)
-    sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
+# Create model
+def multilayer_perceptron(x, weights, biases):
+    # Hidden layer with RELU activation
+    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+    layer_1 = tf.nn.relu(layer_1)
 
-  # Test trained model
-  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
+    # Hidden layer with RELU activation
+    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+    layer_2 = tf.nn.relu(layer_2)
 
-if __name__ == '__main__':
-    main()
+    # Hidden layer with RELU activation
+    layer_3 = tf.add(tf.matmul(layer_2, weights['h3']), biases['b3'])
+    layer_3 = tf.nn.relu(layer_3)
+
+    # Hidden layer with RELU activation
+    layer_4 = tf.add(tf.matmul(layer_3, weights['h4']), biases['b4'])
+    layer_4 = tf.nn.relu(layer_4)
+
+    # Hidden layer with RELU activation
+    layer_5 = tf.add(tf.matmul(layer_4, weights['h5']), biases['b5'])
+    layer_5 = tf.nn.relu(layer_5)
+
+    # Output layer with linear activation
+    out_layer = tf.matmul(layer_5, weights['out']) + biases['out']
+
+    return out_layer
+
+# Store layers weight & bias
+weights = {
+    'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
+    'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
+    'h3': tf.Variable(tf.random_normal([n_hidden_2, n_hidden_3])),
+    'h4': tf.Variable(tf.random_normal([n_hidden_3, n_hidden_4])),
+    'h5': tf.Variable(tf.random_normal([n_hidden_4, n_hidden_5])),
+    'out': tf.Variable(tf.random_normal([n_hidden_5, n_classes]))
+}
+biases = {
+    'b1': tf.Variable(tf.random_normal([n_hidden_1])),
+    'b2': tf.Variable(tf.random_normal([n_hidden_2])),
+    'b3': tf.Variable(tf.random_normal([n_hidden_3])),
+    'b4': tf.Variable(tf.random_normal([n_hidden_4])),
+    'b5': tf.Variable(tf.random_normal([n_hidden_5])),
+    'out': tf.Variable(tf.random_normal([n_classes]))
+}
+# Construct model
+pred = multilayer_perceptron(x, weights, biases)
+
+# Define loss and optimizer
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+
+# Initializing the variables
+init = tf.global_variables_initializer()
+
+# Launch the graph
+with tf.Session() as sess:
+    sess.run(init)
+    # Training cycle
+    for epoch in range(training_epochs):
+        avg_cost = 0.
+        total_batch = int(mnist.train.num_examples/batch_size)
+        # Loop over all batches
+        for i in range(total_batch):
+            batch_x, batch_y = mnist.train.next_batch(batch_size)
+            # Run optimization op (backprop) and cost op (to get loss value)
+            _, c = sess.run([optimizer, cost], feed_dict={x: batch_x,
+                                                          y: batch_y})
+            # Compute average loss
+            avg_cost += c / total_batch
+        # Display logs per epoch step
+        if epoch % display_step == 0:
+            print("Epoch:", '%04d' % (epoch+1), "cost=", \
+                "{:.9f}".format(avg_cost))
+    print("Optimization Finished!")
+
+    # Test model
+    correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+    # Calculate accuracy
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    print("Accuracy:", accuracy.eval({x: mnist.test.images, y: mnist.test.labels}))
