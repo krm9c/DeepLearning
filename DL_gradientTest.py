@@ -21,11 +21,11 @@ batch_size = 100
 display_step = 1
 
 # Network Parameters
-n_hidden_1 = 1024 # 1st layer number of features
-n_hidden_2 = 1024 # 2nd layer number of features
-n_hidden_3 = 1024 # 2nd layer number of features
-n_hidden_4 = 1024 # 2nd layer number of features
-n_hidden_5 = 1024 # 2nd layer number of features
+n_hidden_1 = 30 # 1st layer number of features
+n_hidden_2 = 30 # 2nd layer number of features
+n_hidden_3 = 30 # 2nd layer number of features
+n_hidden_4 = 30 # 2nd layer number of features
+n_hidden_5 = 30 # 2nd layer number of features
 
 n_input = 784 # MNIST data input (img shape: 28*28)
 

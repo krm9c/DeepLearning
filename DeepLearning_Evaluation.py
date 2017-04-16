@@ -10,20 +10,16 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 ### Import all the libraries required by us
-sys.path.append('/Users/krishnanraghavan/Dropbox/Work/Research/Common_Libraries')
-sys.path.append('/Users/krishnanraghavan/Dropbox/Work/Research/Paper_1_codes')
-sys.path.append('/Users/krishnanraghavan/Dropbox/Work/Research/Paper_2_codes')
-from Library_Paper_two import *
-from Data_import import *
-## Set path for the data
-path = "/Users/krishnanraghavan/Documents/Data-case-study-1"
-myRespath = "/Users/krishnanraghavan/DesktopRes/Results"
+from tensorflow.examples.tutorials.mnist import input_data
+mnist = input_data.read_data_sets("MNIST_data/",one_hot=True)
 ###################################################################################
 # Setup some parameters for the analysis
 # The NN parameters
-Train_batch_size = 100
-Test_batch_size = 100
+Train_batch_size = 200
+Test_batch_size = 200
 Train_Glob_Iterations = 10
+
+
 ####################################################################################
 # Helper Function for the weight and the bias variable
 # Weight
@@ -34,6 +30,8 @@ def weight_variable(shape, trainable, name):
 def bias_variable(shape, trainable, name):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial, trainable = trainable, name = name)
+
+
 #  Summaries for the variables
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -46,6 +44,8 @@ def variable_summaries(var):
         tf.summary.scalar('max', tf.reduce_max(var))
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram_1', var)
+
+
 # Class
 class Agent():
     def __init__(self):
@@ -54,6 +54,7 @@ class Agent():
 		self.Trainer = {}
 		self.Summaries = {}
 		self.sess = tf.InteractiveSession()
+
     ###################################################################################
     # Function for defining every NN
     def nn_layer(self, input_tensor, input_dim, output_dim, act, trainability, key):
@@ -177,9 +178,8 @@ def Analyse(TrainX, TestX, TrainY, TestY):
     return pr
 
 
-# DataSet -- 1
-print "----------------------------Artificial Data-set--------------------------------------"
-Acc =[]
+# DataSeT
+print "---MNIST---"
 for x in tqdm(xrange(1)):
     num = 1
     # Method -- 1 # With the pre processing step
