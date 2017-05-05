@@ -19,11 +19,11 @@ X = (X / 16).astype(np.float32)
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
 
 # Training
-classifier = SupervisedDBNClassification(hidden_layers_structure=[256, 256],
+classifier = SupervisedDBNClassification(hidden_layers_structure=[1000, 1000, 1000],
                                          learning_rate_rbm=0.05,
                                          learning_rate=0.1,
-                                         n_epochs_rbm=10,
-                                         n_iter_backprop=100,
+                                         n_epochs_rbm=15,
+                                         n_iter_backprop= 50,
                                          batch_size=32,
                                          activation_function='relu',
                                          dropout_p=0.2)

@@ -1,3 +1,4 @@
+
 # Deep Learning Simulations
 # Author : Krishnan Raghavan
 # Date: Dec 25, 2016
@@ -104,8 +105,6 @@ class Agent():
 
             Keys.append(self.classifier['Weightclass'])
             Keys.append(self.classifier['Biasclass'])
-
-
 
         with tf.name_scope("Trainer"):
 
