@@ -9,40 +9,66 @@ import numpy as np
 import tensorflow as tf
 from six.moves import cPickle as pickle
 from six.moves import range
+import gzip
 
-pickle_file = 'notMNIST.pickle'
 
-with open(pickle_file, 'rb') as f:
-  save = pickle.load(f)
-  train_dataset = save['train_dataset']
-  train_labels = save['train_labels']
-  valid_dataset = save['valid_dataset']
-  valid_labels = save['valid_labels']
-  test_dataset = save['test_dataset']
-  test_labels = save['test_labels']
-  del save  # hint to help gc free up memory
-  print('Training set', train_dataset.shape, train_labels.shape)
-  print('Validation set', valid_dataset.shape, valid_labels.shape)
-  print('Test set', test_dataset.shape, test_labels.shape)
 
-  image_size = 28
-  num_labels = 10
+# Initialize the parameters, graph and the final update laws
+# hyper parameter setting
+batch_size = 64
+valid_size = test_size = 1000
+num_data_input = 21
+num_hidden = 240
+num_labels = 4
+act_f = "relu"
+init_f = "uniform"
+back_init_f = "uniform"
+weight_uni_range = 0.05
+back_uni_range = 0.5
+lr = 0.1
+num_layer = 6 #should be >= 3
+num_steps = 2000
+graph = tf.Graph()
+pickle_file = 'phm08'
 
-  def accuracy(predictions, labels):
+
+def accuracy(predictions, labels):
     return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
             / predictions.shape[0])
 
-  def reformat(dataset, labels):
-    dataset = dataset.reshape((-1, image_size * image_size)).astype(np.float32)
+
+def reformat(dataset, labels):
+    dataset = dataset.reshape((-1, num_data_input)).astype(np.float32)/float(255)
     # Map 0 to [1.0, 0.0, 0.0 ...], 1 to [0.0, 1.0, 0.0 ...]
     labels = (np.arange(num_labels) == labels[:,None]).astype(np.float32)
+    labels = labels.reshape((-1, num_labels)).astype(np.float32)
     return dataset, labels
-  train_dataset, train_labels = reformat(train_dataset, train_labels)
-  valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
-  test_dataset, test_labels = reformat(test_dataset, test_labels)
-  print('Training set', train_dataset.shape, train_labels.shape)
-  print('Validation set', valid_dataset.shape, valid_labels.shape)
-  print('Test set', test_dataset.shape, test_labels.shape)
+
+
+
+f = gzip.open('../data/'+pickle_file+'.pkl.gz','rb')
+dataset = pickle.load(f)
+train_dataset = dataset[0]
+test_dataset  = dataset[1]
+train_labels  = dataset[2]
+test_labels   = dataset[3]
+valid_dataset = dataset[1]
+valid_labels  = dataset[3]
+
+del f  # hint to help gc free up memory
+train_dataset, train_labels = reformat(train_dataset, train_labels)
+valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
+test_dataset, test_labels = reformat(test_dataset, test_labels)
+from sklearn import preprocessing
+train_dataset =  preprocessing.scale(train_dataset)
+valid_dataset =  preprocessing.scale(valid_dataset)
+test_dataset =  preprocessing.scale(test_dataset)
+
+
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+
 
 def drelu(x):
     zero = tf.zeros(x.get_shape())
@@ -72,10 +98,8 @@ def init_ftn(name, num_input, num_output, runiform_range):
     import math
     if(name == "normal"):
         return(tf.truncated_normal([num_input, num_output]))
-
     elif(name == "uniform"):
-        return(tf.random_uniform([num_input, num_output], minval = -1/float(math.sqrt(num_input)), maxval = 1/float(math.sqrt(num_input)) ))
-
+        return(tf.random_uniform([num_input, num_output], minval = -1/float(math.sqrt(num_input)), maxval = 1/float(math.sqrt(num_output)) ))
     else:
         print("not normal or uniform")
 
@@ -95,7 +119,6 @@ class Weights:
         self.activation = act_ftn(act_f)
         self.dactivation = dact_ftn(act_f)
         self.notfinal = notfinal
-
         self.inputs = None
         self.before_activation = None
 
@@ -114,12 +137,13 @@ class Weights:
             else:
                 return(before_activation)
 
-    def optimize(self, dError_dy, lr = 0.01):
+    def optimize(self, dError_dy):
         #dError_dy dim is [batch_size, 1, num_fianl]
+        global lr
+        lr = lr*0.96
         if (self.notfinal):
-            dError_dhidden = tf.matmul(dError_dy,
-                                         tf.matmul(self.backward, tf.matrix_diag(self.dactivation(self.before_activation))))
-
+            dError_dhidden = tf.matmul(dError_dy,\
+            tf.matmul(self.backward, tf.matrix_diag(self.dactivation(self.before_activation))))
             delta_weights = tf.reduce_mean(tf.matmul(self.inputs, dError_dhidden), 0)
             delta_biases = tf.reduce_mean(dError_dhidden, 0)
         else:
@@ -129,22 +153,8 @@ class Weights:
         change_biases = tf.assign_sub(self.biases, lr*tf.reshape(delta_biases,(self.num_output,)))
         return change_weights, change_biases
 
-# Initialize the parameters, graph and the final update laws
-# hyper parameter setting
-image_size = 28
-batch_size = 64
-valid_size = test_size = 10000
-num_data_input = image_size*image_size
-num_hidden = 240
-num_labels = 10
-act_f = "relu"
-init_f = "uniform"
-back_init_f = "uniform"
-weight_uni_range = 0.05
-back_uni_range = 0.5
-lr = 0.001
-num_layer = 6 #should be >= 3
-num_steps = 20000
+
+
 
 graph = tf.Graph()
 
@@ -152,7 +162,7 @@ with graph.as_default():
     # Input data. For the training data, we use a placeholder that will be fed
     # at run time with a training minibatch.
     tf_train_dataset = tf.placeholder(tf.float32,
-                                      shape=(batch_size, image_size * image_size))
+                                      shape=(batch_size, num_data_input))
     tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
     tf_valid_dataset = tf.constant(valid_dataset)
     tf_test_dataset = tf.constant(test_dataset)
@@ -183,12 +193,11 @@ with graph.as_default():
     loss = tf.reduce_mean(cross_entropy)
 
     dError_dy = tf.reshape(tf.gradients(cross_entropy, logits)[0], [batch_size, 1, num_labels])
-
     # optimization
     train_list = []
     for i in range(num_layer-1):
         name = "W"+str(i)
-        train_list += Weight_list[name].optimize(dError_dy, lr)
+        train_list += Weight_list[name].optimize(dError_dy)
 
     y_valid = None
     x_valid = tf_valid_dataset
@@ -231,9 +240,10 @@ with tf.Session(graph=graph) as session:
       feed_dict = {tf_train_dataset : batch_data, tf_train_labels : batch_labels}
       l, predictions = session.run([loss, train_prediction], feed_dict=feed_dict)
       session.run(train_list, feed_dict = feed_dict)
-      if (step % 2 == 0):
+      if (step % 100 == 0):
         print("Minibatch loss at step %d: %f" % (step, l))
         print("Minibatch accuracy: %.1f%%" % accuracy(predictions, batch_labels))
         print("Validation accuracy: %.1f%%" % accuracy(
           valid_prediction.eval(), valid_labels))
+
     print("Test accuracy: %.1f%%" % accuracy(test_prediction.eval(), test_labels))
