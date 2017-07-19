@@ -23,11 +23,11 @@ num_labels = 10
 act_f = "relu"
 init_f = "uniform"
 back_init_f = "uniform"
-weight_uni_range = 0.05
-back_uni_range = 0.5
-lr = 0.1
-num_layer = 10 #should be >= 3
-num_steps = 10000
+weight_uni_range = 0.01
+back_uni_range = 0.1
+lr = 0.01
+num_layer = 5 #should be >= 3
+num_steps = 5000
 pickle_file = 'mnist'
 
 
@@ -61,12 +61,41 @@ test_dataset, test_labels = reformat(test_dataset, test_labels)
 from sklearn import preprocessing
 train_dataset =  preprocessing.scale(train_dataset)
 valid_dataset =  preprocessing.scale(valid_dataset)
-test_dataset =  preprocessing.scale(test_dataset)
+test_dataset  =  preprocessing.scale(test_dataset)
 
 
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
+
+
+print ("Now I am going to reduce dimensions")
+import os, sys
+
+
+# Dimension redyce the data if needed
+sys.path.append('../CommonLibrariesDissertation')
+from Library_Paper_two import *
+train_dataset, Tree = initialize_calculation(T = None, Data = train_dataset, gsize = 2,\
+par_train = 0, output_dimension = 350)
+print ("Train done")
+test_dataset, Tree = initialize_calculation(T = Tree, Data = test_dataset, gsize = 2,\
+par_train = 1, output_dimension = 350)
+print ("Test done")
+valid_dataset, Tree = initialize_calculation(T = Tree, Data = valid_dataset, gsize = 2,\
+par_train = 1, output_dimension = 350)
+print ("Valid done")
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+num_data_input = test_dataset.shape[1]
+print ("input_dimensions", num_data_input)
+train_dataset = train_dataset.astype(np.float32)
+valid_dataset = valid_dataset.astype(np.float32)
+test_dataset =  test_dataset.astype(np.float32)
+print ("input_dimensions", num_data_input)
+print(train_dataset.dtype)
+x = input("Enter a number to continue")
 
 
 def drelu(x):

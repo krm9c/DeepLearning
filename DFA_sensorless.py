@@ -15,21 +15,21 @@ import gzip
 
 # Initialize the parameters, graph and the final update laws
 # hyper parameter setting
+image_size = 28
 batch_size = 256
-valid_size = test_size = 1000
+valid_size = test_size = 10000
 num_data_input = 48
-num_hidden = 240
-num_labels = 10
-act_f = "relu"
+num_hidden = 100
+num_labels =11
+pickle_file = 'sensorless'
+act_f = "sigmoid"
 init_f = "uniform"
 back_init_f = "uniform"
-weight_uni_range = 0.05
-back_uni_range = 0.5
-lr = 0.001
-num_layer = 6 #should be >= 3
-num_steps = 2000
-graph = tf.Graph()
-pickle_file = 'sensorless'
+weight_uni_range = 0.01
+back_uni_range = 0.1
+lr = 0.1
+num_layer = 5 #should be >= 3
+num_steps = 10000
 
 
 def accuracy(predictions, labels):
@@ -50,11 +50,10 @@ f = gzip.open('../data/'+pickle_file+'.pkl.gz','rb')
 dataset = pickle.load(f)
 train_dataset = dataset[0]
 test_dataset  = dataset[1]
-train_labels  = dataset[2]
-test_labels   = dataset[3]
+train_labels  = (dataset[2]-1)
+test_labels   = (dataset[3]-1)
 valid_dataset = dataset[1]
-valid_labels  = dataset[3]
-
+valid_labels  = (dataset[3]-1)
 del f  # hint to help gc free up memory
 train_dataset, train_labels = reformat(train_dataset, train_labels)
 valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
@@ -70,6 +69,36 @@ print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
 
 
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+
+print ("Now I am going to reduce dimensions")
+import os, sys
+# Dimension redyce the data if needed
+sys.path.append('../CommonLibrariesDissertation')
+from Library_Paper_two import *
+train_dataset, Tree = initialize_calculation(T = None, Data = train_dataset, gsize = 2,\
+par_train = 0, output_dimension = 20)
+print ("Train done")
+test_dataset, Tree = initialize_calculation(T = Tree, Data = test_dataset, gsize = 2,\
+par_train = 1, output_dimension = 20)
+print ("Test done")
+valid_dataset, Tree = initialize_calculation(T = Tree, Data = valid_dataset, gsize = 2,\
+par_train = 1, output_dimension = 20)
+print ("Valid done")
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+num_data_input = test_dataset.shape[1]
+print ("input_dimensions", num_data_input)
+train_dataset = train_dataset.astype(np.float32)
+valid_dataset = valid_dataset.astype(np.float32)
+test_dataset =  test_dataset.astype(np.float32)
+print ("input_dimensions", num_data_input)
+print(train_dataset.dtype)
+x = input("Enter a number to continue")
+
 def drelu(x):
     zero = tf.zeros(x.get_shape())
     one = tf.ones(x.get_shape())
@@ -78,11 +107,19 @@ def drelu(x):
 def dtanh(x):
     return(1-tf.multiply(tf.nn.tanh(x),tf.nn.tanh(x)))
 
+def sigmoid(x):
+    return tf.sigmoid(x)
+def dsigmoid(x):
+    return (tf.multiply(tf.sigmoid(x),(1-tf.sigmoid(x))))
+
+
 def act_ftn(name):
     if(name == "tanh"):
         return(tf.nn.tanh)
     elif(name == "relu"):
         return(tf.nn.relu)
+    elif(name == "sigmoid"):
+        return(tf.sigmoid)
     else:
         print("not tanh or relu")
 
@@ -91,6 +128,8 @@ def dact_ftn(name):
         return(dtanh)
     elif(name == "relu"):
         return(drelu)
+    elif(name == "sigmoid"):
+        return(dsigmoid)
     else:
         print("not tanh or relu")
 

@@ -11,32 +11,28 @@ from six.moves import cPickle as pickle
 from six.moves import range
 import gzip
 
-
-image_size = 28
-num_labels = 10
 # Initialize the parameters, graph and the final update laws
 # hyper parameter setting
 image_size = 28
 batch_size = 256
 valid_size = test_size = 10000
-num_data_input = 220
+num_data_input = 110
 num_hidden = 100
-num_labels = 10
-act_f = "tanh"
+num_labels = 4
+pickle_file = 'artificial'
+act_f = "relu"
 init_f = "uniform"
 back_init_f = "uniform"
-weight_uni_range = 0.05
-back_uni_range = 0.5
+weight_uni_range = 0.01
+back_uni_range = 0.1
 lr = 0.1
-num_layer = 10 #should be >= 3
-num_steps = 10000
-pickle_file = 'artificial'
+num_layer = 5 #should be >= 3
+num_steps = 8000
 
 
 def accuracy(predictions, labels):
     return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
             / predictions.shape[0])
-
 
 def reformat(dataset, labels):
     dataset = dataset.reshape((-1, num_data_input)).astype(np.float32)
@@ -54,7 +50,6 @@ train_labels  = dataset[2]
 test_labels   = dataset[3]
 valid_dataset = dataset[1]
 valid_labels  = dataset[3]
-
 del f  # hint to help gc free up memory
 train_dataset, train_labels = reformat(train_dataset, train_labels)
 valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
@@ -68,6 +63,52 @@ test_dataset =  preprocessing.scale(test_dataset)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
+
+print ("Now I am going to reduce dimensions")
+import os, sys
+# Dimension redyce the data if needed
+sys.path.append('../CommonLibrariesDissertation')
+from Library_Paper_two import *
+train_dataset, Tree = initialize_calculation(T = None, Data = train_dataset, gsize = 2,\
+par_train = 0, output_dimension = 110)
+print ("Train done")
+test_dataset, Tree = initialize_calculation(T = Tree, Data = test_dataset, gsize = 2,\
+par_train = 1, output_dimension = 110)
+print ("Test done")
+valid_dataset, Tree = initialize_calculation(T = Tree, Data = valid_dataset, gsize = 2,\
+par_train = 1, output_dimension = 110)
+print ("Valid done")
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+num_data_input = test_dataset.shape[1]
+print ("Now I am going to reduce dimensions")
+import os, sys
+# Dimension redyce the data if needed
+sys.path.append('../CommonLibrariesDissertation')
+from Library_Paper_two import *
+train_dataset, Tree = initialize_calculation(T = None, Data = train_dataset, gsize = 2,\
+par_train = 0, output_dimension = 20)
+print ("Train done")
+test_dataset, Tree = initialize_calculation(T = Tree, Data = test_dataset, gsize = 2,\
+par_train = 1, output_dimension = 20)
+print ("Test done")
+valid_dataset, Tree = initialize_calculation(T = Tree, Data = valid_dataset, gsize = 2,\
+par_train = 1, output_dimension = 20)
+print ("Valid done")
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+num_data_input = test_dataset.shape[1]
+print ("input_dimensions", num_data_input)
+train_dataset = train_dataset.astype(np.float32)
+valid_dataset = valid_dataset.astype(np.float32)
+test_dataset =  test_dataset.astype(np.float32)
+print ("input_dimensions", num_data_input)
+print(train_dataset.dtype)
+x = input("Enter a number to continue")
+
+
 
 
 def drelu(x):

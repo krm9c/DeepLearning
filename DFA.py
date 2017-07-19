@@ -28,6 +28,27 @@ with open(pickle_file, 'rb') as f:
   image_size = 28
   num_labels = 10
 
+
+  # Initialize the parameters, graph and the final update laws
+  # hyper parameter setting
+  image_size = 28
+  batch_size = 64
+  valid_size = test_size = 10000
+  num_data_input = 784
+  num_hidden = 240
+  num_labels = 10
+  act_f = "tanh"
+  init_f = "uniform"
+  back_init_f = "uniform"
+  weight_uni_range = 0.05
+  back_uni_range = 0.5
+  lr = 0.01
+  num_layer = 3 #should be >= 3
+  num_steps = 50000
+
+  graph = tf.Graph()
+
+
   def accuracy(predictions, labels):
     return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
             / predictions.shape[0])
@@ -37,12 +58,41 @@ with open(pickle_file, 'rb') as f:
     # Map 0 to [1.0, 0.0, 0.0 ...], 1 to [0.0, 1.0, 0.0 ...]
     labels = (np.arange(num_labels) == labels[:,None]).astype(np.float32)
     return dataset, labels
-  train_dataset, train_labels = reformat(train_dataset, train_labels)
-  valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
-  test_dataset, test_labels = reformat(test_dataset, test_labels)
-  print('Training set', train_dataset.shape, train_labels.shape)
-  print('Validation set', valid_dataset.shape, valid_labels.shape)
-  print('Test set', test_dataset.shape, test_labels.shape)
+
+train_dataset, train_labels = reformat(train_dataset, train_labels)
+valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
+test_dataset, test_labels = reformat(test_dataset, test_labels)
+
+print('Training set', train_dataset.shape, train_labels.shape)
+print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape, test_labels.shape)
+
+# print ("Now I am going to reduce dimensions")
+# import os, sys
+# # Dimension redyce the data if needed
+# sys.path.append('../CommonLibrariesDissertation')
+# from Library_Paper_two import *
+# train_dataset, Tree = initialize_calculation(T = None, Data = train_dataset, gsize = 2,\
+# par_train = 0, output_dimension = 350)
+# print ("Train done")
+# test_dataset, Tree = initialize_calculation(T = Tree, Data = test_dataset, gsize = 2,\
+# par_train = 1, output_dimension = 350)
+# print ("Test done")
+# valid_dataset, Tree = initialize_calculation(T = Tree, Data = valid_dataset, gsize = 2,\
+# par_train = 1, output_dimension = 350)
+# print ("Valid done")
+# print('Training set', train_dataset.shape, train_labels.shape)
+# print('Validation set', valid_dataset.shape, valid_labels.shape)
+# print('Test set', test_dataset.shape, test_labels.shape)
+# num_data_input = test_dataset.shape[1]
+# print ("input_dimensions", num_data_input)
+# train_dataset = train_dataset.astype(np.float32)
+# valid_dataset = valid_dataset.astype(np.float32)
+# test_dataset =  test_dataset.astype(np.float32)
+# print ("input_dimensions", num_data_input)
+# print(train_dataset.dtype)
+x = input("Enter a number to continue")
+
 
 def drelu(x):
     zero = tf.zeros(x.get_shape())
@@ -72,10 +122,8 @@ def init_ftn(name, num_input, num_output, runiform_range):
     import math
     if(name == "normal"):
         return(tf.truncated_normal([num_input, num_output]))
-
     elif(name == "uniform"):
-        return(tf.random_uniform([num_input, num_output], minval = -1/float(math.sqrt(num_input)), maxval = 1/float(math.sqrt(num_input)) ))
-
+        return(tf.random_uniform([num_input, num_output], minval = -1/float(math.sqrt(num_input)), maxval = 1/float(math.sqrt(num_output)) ))
     else:
         print("not normal or uniform")
 
@@ -95,7 +143,6 @@ class Weights:
         self.activation = act_ftn(act_f)
         self.dactivation = dact_ftn(act_f)
         self.notfinal = notfinal
-
         self.inputs = None
         self.before_activation = None
 
@@ -114,12 +161,13 @@ class Weights:
             else:
                 return(before_activation)
 
-    def optimize(self, dError_dy, lr = 0.01):
+    def optimize(self, dError_dy):
         #dError_dy dim is [batch_size, 1, num_fianl]
+        global lr
+        lr = lr*0.96
         if (self.notfinal):
-            dError_dhidden = tf.matmul(dError_dy,
-                                         tf.matmul(self.backward, tf.matrix_diag(self.dactivation(self.before_activation))))
-
+            dError_dhidden = tf.matmul(dError_dy,\
+            tf.matmul(self.backward, tf.matrix_diag(self.dactivation(self.before_activation))))
             delta_weights = tf.reduce_mean(tf.matmul(self.inputs, dError_dhidden), 0)
             delta_biases = tf.reduce_mean(dError_dhidden, 0)
         else:
@@ -129,22 +177,6 @@ class Weights:
         change_biases = tf.assign_sub(self.biases, lr*tf.reshape(delta_biases,(self.num_output,)))
         return change_weights, change_biases
 
-# Initialize the parameters, graph and the final update laws
-# hyper parameter setting
-image_size = 28
-batch_size = 64
-valid_size = test_size = 10000
-num_data_input = image_size*image_size
-num_hidden = 240
-num_labels = 10
-act_f = "relu"
-init_f = "uniform"
-back_init_f = "uniform"
-weight_uni_range = 0.05
-back_uni_range = 0.5
-lr = 0.001
-num_layer = 6 #should be >= 3
-num_steps = 20000
 
 graph = tf.Graph()
 
@@ -152,24 +184,25 @@ with graph.as_default():
     # Input data. For the training data, we use a placeholder that will be fed
     # at run time with a training minibatch.
     tf_train_dataset = tf.placeholder(tf.float32,
-                                      shape=(batch_size, image_size * image_size))
+                                      shape=(batch_size, num_data_input))
     tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
     tf_valid_dataset = tf.constant(valid_dataset)
     tf_test_dataset = tf.constant(test_dataset)
 
     # model building
     Weight_list = {}
-
+    Reg_list = []
     name = "W0"
     Weight_list[name] = Weights(batch_size, num_data_input, num_hidden, num_labels, act_f, init_f, True, back_init_f, weight_uni_range, back_uni_range)
-
+    Reg_list.append(Weight_list[name])
     for i in range(num_layer-3):
         name = "W" + str(i+1)
         Weight_list[name] = Weights(batch_size, num_hidden, num_hidden, num_labels, act_f, init_f, True, back_init_f, weight_uni_range, back_uni_range)
+        Reg_list.append(Weight_list[name])
 
     name = "W" + str(num_layer-2)
     Weight_list[name] = Weights(batch_size, num_hidden, num_labels, num_labels, act_f, init_f, False, back_init_f, weight_uni_range, back_uni_range)
-
+    Reg_list.append(Weight_list[name])
     y_train = None
     x_train = tf_train_dataset
     for i in range(num_layer-1):
@@ -178,17 +211,17 @@ with graph.as_default():
             x_train = Weight_list[name](x_train, batch_size)
         else:
             y_train = Weight_list[name](x_train, batch_size)
+
     logits = y_train
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits = logits, labels = tf_train_labels)
     loss = tf.reduce_mean(cross_entropy)
 
-    dError_dy = tf.reshape(tf.gradients(cross_entropy, logits)[0], [batch_size, 1, num_labels])
-
+    dError_dy = tf.reshape(tf.gradients(loss, logits)[0], [batch_size, 1, num_labels])
     # optimization
     train_list = []
     for i in range(num_layer-1):
         name = "W"+str(i)
-        train_list += Weight_list[name].optimize(dError_dy, lr)
+        train_list += Weight_list[name].optimize(dError_dy)
 
     y_valid = None
     x_valid = tf_valid_dataset
@@ -231,9 +264,11 @@ with tf.Session(graph=graph) as session:
       feed_dict = {tf_train_dataset : batch_data, tf_train_labels : batch_labels}
       l, predictions = session.run([loss, train_prediction], feed_dict=feed_dict)
       session.run(train_list, feed_dict = feed_dict)
-      if (step % 2 == 0):
+      if (step % 100 == 0):
         print("Minibatch loss at step %d: %f" % (step, l))
         print("Minibatch accuracy: %.1f%%" % accuracy(predictions, batch_labels))
         print("Validation accuracy: %.1f%%" % accuracy(
           valid_prediction.eval(), valid_labels))
+
+
     print("Test accuracy: %.1f%%" % accuracy(test_prediction.eval(), test_labels))
